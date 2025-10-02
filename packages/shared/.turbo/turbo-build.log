@@ -1,0 +1,4 @@
+
+> @diagnostik/shared@0.1.0 build C:\Dev\diagnostik-chat\packages\shared
+> tsc -p tsconfig.json
+
