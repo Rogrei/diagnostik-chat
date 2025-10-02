@@ -82,16 +82,57 @@ app.post(
 );
 
 app.get(
-  "/api/interviews",
-  async (req: FastifyRequest, reply: FastifyReply) => {
+  "/api/interviews/:id",
+  async (
+    req: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    // validera med safeParse
+    const parsed = InterviewParamsSchema.safeParse(req.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "Invalid interview id" });
+    }
+
     try {
-      const rows = await query(
-        "SELECT * FROM interviews ORDER BY started_at DESC NULLS LAST"
-      );
-      return reply.send(rows);
+      const { id } = parsed.data;
+      const rows = await query("SELECT * FROM interviews WHERE id = $1", [id]);
+
+      if (rows.length === 0) {
+        return reply.code(404).send({ error: "Interview not found" });
+      }
+
+      return reply.send(rows[0]);
     } catch (err: any) {
       req.log.error(err);
-      return reply.code(500).send({ error: err.message });
+      return reply.code(500).send({ error: "Unexpected error" });
+    }
+  }
+);
+
+// Schema + typ för params
+const InterviewParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+type InterviewParams = z.infer<typeof InterviewParamsSchema>;
+
+// Route för GET /api/interviews/:id
+app.get(
+  "/api/interviews/:id",
+  async (req: FastifyRequest<{ Params: InterviewParams }>, reply: FastifyReply) => {
+    try {
+      const { id } = InterviewParamsSchema.parse(req.params);
+
+      const rows = await query("SELECT * FROM interviews WHERE id = $1", [id]);
+
+      if (rows.length === 0) {
+        return reply.code(404).send({ error: "Interview not found" });
+      }
+
+      return reply.send(rows[0]);
+    } catch (err: any) {
+      req.log.error(err);
+      return reply.code(400).send({ error: err.message });
     }
   }
 );
