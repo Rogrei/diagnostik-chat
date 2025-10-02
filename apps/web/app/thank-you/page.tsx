@@ -2,41 +2,31 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
 
-type InterviewStatus = {
-  sessionId: string;
-  status: "active" | "ended";
-  consentAt: string;
-  startedAt: string;
-  endedAt?: string | null;
-};
-
-export default function ThankYouPage() {
+function ThankYouContent() {
   const params = useSearchParams();
   const sessionId = params.get("sessionId");
-  const [status, setStatus] = useState<InterviewStatus | null>(null);
-
-  useEffect(() => {
-    if (!sessionId) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session/${sessionId}`)
-      .then(r => r.json())
-      .then(data => setStatus(data))
-      .catch(() => {});
-  }, [sessionId]);
 
   return (
-    <section className="p-6 text-center">
-      <h2 className="text-2xl font-semibold">Tack!</h2>
-      <p className="mt-4 text-lg text-gray-700">Intervjun är nu avslutad.</p>
-
-      {status && (
-        <p className="mt-2 text-gray-500">
-          Status i databasen: {status.status} <br />
-          Avslutad: {status.endedAt || "–"}
+    <section className="p-6">
+      <h2 className="text-xl font-semibold">Tack för din medverkan!</h2>
+      <p className="mt-3 text-gray-600">
+        Intervjun är avslutad.
+      </p>
+      {sessionId && (
+        <p className="mt-2 text-sm text-gray-500">
+          Session: {sessionId}
         </p>
       )}
     </section>
   );
 }
 
+export default function ThankYouPage() {
+  return (
+    <Suspense fallback={<p>Laddar …</p>}>
+      <ThankYouContent />
+    </Suspense>
+  );
+}

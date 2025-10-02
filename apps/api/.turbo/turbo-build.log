@@ -1,0 +1,4 @@
+
+> @diagnostik/api@0.1.0 build C:\Dev\diagnostik-chat\apps\api
+> tsc --project tsconfig.json
+

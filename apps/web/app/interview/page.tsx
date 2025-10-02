@@ -2,7 +2,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { apiPost } from "@/lib/api";
 
 type InterviewStatus = {
@@ -13,7 +13,7 @@ type InterviewStatus = {
   endedAt?: string | null;
 };
 
-export default function InterviewPage() {
+function InterviewContent() {
   const params = useSearchParams();
   const router = useRouter();
   const sessionId = params.get("sessionId");
@@ -21,22 +21,21 @@ export default function InterviewPage() {
   const [status, setStatus] = useState<InterviewStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
-  const [transcript, setTranscript] = useState("");   // ✅ flyttad in hit
+  const [transcript, setTranscript] = useState("");
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // 🔎 Hämta status från API
+  // 🔎 Hämta status
   useEffect(() => {
     if (!sessionId) return;
-
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session/${sessionId}`)
       .then(r => r.json())
       .then(data => setStatus(data))
       .catch(() => setErr("Kunde inte hämta sessionstatus"));
   }, [sessionId]);
 
-  // Initiera WebRTC
+  // WebRTC init
   useEffect(() => {
     if (!sessionId) return;
 
@@ -52,55 +51,45 @@ export default function InterviewPage() {
         const pc = new RTCPeerConnection();
         pcRef.current = pc;
 
-        // Data channel → transcript
+        // Data channel
         const dc = pc.createDataChannel("oai-events");
 
         dc.onopen = () => {
-          // När kanalen är öppen → be modellen börja producera transkript
           dc.send(JSON.stringify({ type: "response.create" }));
         };
 
-      dc.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
+        dc.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
 
-          if (msg.type === "response.audio_transcript.delta") {
-            // bitar av text i delta/text → bara för UI
-            const piece = msg.delta ?? msg.text ?? "";
-            if (piece) {
-              setTranscript((prev) => prev + piece);
-            }
-          }
-
-          if (msg.type === "response.audio_transcript.done") {
-            // hela segmentet klart → spara i DB
-            const final = msg.transcript ?? msg.text ?? "";
-            if (final) {
-              console.log("Final transcript:", final);
-
-              if (sessionId) {
-                apiPost("/api/transcripts", { sessionId, text: final })
-                  .catch((e) => console.warn("Kunde inte spara transcript:", e));
+            if (msg.type === "response.audio_transcript.delta") {
+              const piece = msg.delta ?? msg.text ?? "";
+              if (piece) {
+                setTranscript((prev) => prev + piece);
+                if (sessionId) {
+                  apiPost("/api/transcripts", { sessionId, text: piece })
+                    .catch((e) => console.warn("Kunde inte spara transcript:", e));
+                }
               }
             }
+
+            if (msg.type === "response.audio_transcript.done") {
+              const final = msg.transcript ?? msg.text ?? "";
+              if (final) console.log("Final transcript:", final);
+            }
+
+            console.log("Realtime event:", msg);
+          } catch {
+            console.warn("Non-JSON message:", event.data);
           }
+        };
 
-          // Debug
-          console.log("Realtime event:", msg);
-
-        } catch {
-          console.warn("Non-JSON message:", event.data);
-        }
-      };
-
-        // Audio från AI
         pc.ontrack = (event) => {
           if (audioRef.current) {
             audioRef.current.srcObject = event.streams[0];
           }
         };
 
-        // Mikrofon
         const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
@@ -155,7 +144,6 @@ export default function InterviewPage() {
     return <p>Ingen sessionId hittades. Gå tillbaka till startsidan.</p>;
   }
 
-  // ✅ Render-delen
   return (
     <section className="p-6">
       <h2 className="text-xl font-semibold">Intervju – Realtime</h2>
@@ -196,6 +184,10 @@ export default function InterviewPage() {
   );
 }
 
-
-
-
+export default function InterviewPage() {
+  return (
+    <Suspense fallback={<p>Laddar intervjun …</p>}>
+      <InterviewContent />
+    </Suspense>
+  );
+}
