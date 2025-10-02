@@ -3,6 +3,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { env } from "./config/env.js";
 import { signRealtimeJwt } from "./lib/jwt.js";
+import { query } from "./db.js";
+import { z } from "zod"; // 👈 lägg till
 
 const app = Fastify({ logger: true });
 
@@ -20,10 +22,15 @@ app.post("/api/realtime/token", async (req, reply) => {
 
   const token = await signRealtimeJwt({
     issuer: env.REALTIME_ISSUER,
-    privateKeyBase64: env.REALTIME_PRIVATE_KEY_BASE64
+    privateKeyBase64: env.REALTIME_PRIVATE_KEY_BASE64,
   });
 
   return reply.send({ token });
+});
+
+app.get("/api/test-db", async (req, reply) => {
+  const rows = await query("SELECT NOW()");
+  return { now: rows[0].now };
 });
 
 // Stub: start interview session (GET för snabb test, POST för frontend)
@@ -35,8 +42,45 @@ async function startSessionHandler(req: any, reply: any) {
 app.get("/api/session/start", startSessionHandler);
 app.post("/api/session/start", startSessionHandler);
 
+// ✅ Ny route: skapa interview
+const InterviewSchema = z.object({
+  customer_name: z.string().min(1),
+  session_id: z.string().optional(),
+});
+
+app.post("/api/interviews", async (req, reply) => {
+  try {
+    const body = InterviewSchema.parse(req.body);
+
+    // Generera ett session_id om inget skickas
+    const sessionId =
+      body.session_id ?? `sess_${Math.random().toString(36).slice(2, 10)}`;
+
+    const rows = await query(
+      "INSERT INTO interviews (customer_name, session_id) VALUES ($1, $2) RETURNING *",
+      [body.customer_name, sessionId]
+    );
+
+    return reply.code(201).send(rows[0]);
+  } catch (err: any) {
+    req.log.error(err);
+    return reply.code(400).send({ error: err.message });
+  }
+});
+
+app.get("/api/interviews", async (req, reply) => {
+  try {
+    const rows = await query("SELECT * FROM interviews ORDER BY started_at DESC NULLS LAST");
+    return reply.send(rows);
+  } catch (err: any) {
+    req.log.error(err);
+    return reply.code(500).send({ error: err.message });
+  }
+});
+
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err);
   process.exit(1);
 });
+
