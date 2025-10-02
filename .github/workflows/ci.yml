@@ -4,32 +4,47 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checka ut koden
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Installera pnpm
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 10
-          run_install: false   # vi kör install själva
+          run_install: false   # vi kör install manuellt
 
+      # 3. Installera Node.js (LTS 20, samma som Vercel)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: 20
+          cache: pnpm
 
+      # 4. Installera beroenden
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 5. Typkontroll
       - name: Typecheck all workspaces
         run: pnpm typecheck
 
+      # 6. Bygg alla workspaces
       - name: Build all workspaces
         run: pnpm build
+
+      # 7. Lint (för web och ev. andra paket)
+      - name: Lint web
+        run: pnpm --filter @diagnostik/web lint
+
+      # 8. Test (just nu placeholder, kör "echo")
+      - name: Run tests
+        run: pnpm test
