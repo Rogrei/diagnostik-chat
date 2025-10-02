@@ -147,11 +147,9 @@ Pakethanterare: pnpm
 
 Hosting: Supabase (DB), Vercel (frontend), Railway/Fly.io (API planerat)
 
-🔗 Dokumentation
-📘 CI/CD-dokumentation
-
-yaml
-Kopiera kod
+## 🔗 Dokumentation
+- 📘 [CI/CD-dokumentation](./docs/ci.md)
+- 🏁 [Rapport Milstolpe M1](./docs/milestone-M1.md)
 
 ---
 
