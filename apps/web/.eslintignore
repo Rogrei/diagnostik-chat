@@ -1,0 +1,6 @@
+# Ignorera byggartefakter och beroenden
+.next/
+node_modules/
+
+# Ignorera eventuella loggar
+*.log
