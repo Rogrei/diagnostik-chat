@@ -17,10 +17,9 @@ jobs:
 
       # 2. Installera pnpm
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v3
         with:
-          version: 10
-          run_install: false   # vi kör install manuellt
+          run_install: false   # ta bort version helt
 
       # 3. Installera Node.js (LTS 20, samma som Vercel)
       - name: Setup Node.js
