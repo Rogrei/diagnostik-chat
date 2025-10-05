@@ -20,15 +20,30 @@ export default function ConsentPage() {
     setLoading(true);
     setErr(null);
     try {
-      const { sessionId } = await apiPost<{ sessionId: string; id: string; status: string }>(
-        "/api/session/start",
-        { accept: true, consentMethod: "ui" }
-      );
+      const clientRequestTime = Date.now(); // 🔸 mäts innan API-anrop
 
-      // ✅ bygg URL säkert på klienten
+      // 🔹 Backend returnerar nu även serverStart
+      const { sessionId, interviewId, status, serverStart } = await apiPost<{
+        sessionId: string;
+        interviewId: string;
+        status: string;
+        serverStart: string; // ISO-sträng
+      }>("/api/session/start", {
+        accept: true,
+        consentMethod: "ui",
+      });
+
+      // 🔹 Beräkna tids-offset (klienttid − servertid)
+      const offsetMs = Date.now() - new Date(serverStart).getTime();
+
+      // 🔹 Spara allt i localStorage
+      localStorage.setItem("sessionId", sessionId);
+      localStorage.setItem("interviewId", interviewId);
+      localStorage.setItem("timeOffsetMs", offsetMs.toString());
+
+      // 🔹 Bygg URL till intervjusidan
       const url = new URL("/interview", location.origin);
       url.searchParams.set("sessionId", sessionId);
-
       router.push(url.toString() as any);
     } catch (e: any) {
       console.error("API error", e);
@@ -63,5 +78,3 @@ export default function ConsentPage() {
     </section>
   );
 }
-
-
