@@ -1,3 +1,4 @@
+
 # Diagnostik-chat Pilot-MVP – Progress
 
 ## ✅ Avklarat (M1 Foundations)
@@ -98,5 +99,3 @@
 - Deploy till Railway (API)  
 - Automatisk migrationshantering vid deploy  
 - Loggning & monitorering i produktion
-
-
