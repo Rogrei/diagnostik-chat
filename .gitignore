@@ -1,5 +1,29 @@
-node_modules
-.next
-dist
-# Local env files
-*.env
+# Node
+node_modules/
+pnpm-lock.yaml
+
+# Next.js & Build
+.next/
+out/
+dist/
+
+# Turbo cache & logs
+.turbo/
+!.turbo/config.json
+
+# Env & secrets
+.env
+.env.local
+.env.development
+.env.production
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Temporary
+tmp/
+temp/

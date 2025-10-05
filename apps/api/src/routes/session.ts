@@ -41,7 +41,14 @@ export async function registerSessionRoutes(app: FastifyInstance) {
       consentMethod,
     ]);
 
-    return reply.send(rows[0]);
+    // 🟢 Returnera även interviewId
+    return reply.send({
+      interviewId: rows[0].id,
+      sessionId: rows[0].sessionId,
+      status: rows[0].status,
+      startedAt: rows[0].startedAt,
+      serverStart: new Date().toISOString() // <-- 🔥 gemensam referenstid (serverns "nu")
+    });
   });
 
   // Avsluta en intervju-session
@@ -90,5 +97,25 @@ export async function registerSessionRoutes(app: FastifyInstance) {
     }
 
     return reply.send(rows[0]);
+  });
+
+  // Lista alla sessions + antal turns
+  app.get("/api/sessions", async () => {
+    const rows = await query(
+      `
+      SELECT i.id,
+             i.session_id,
+             i.status,
+             i.consent_at,
+             i.started_at,
+             i.ended_at,
+             COUNT(t.id) as turns_count
+      FROM interviews i
+      LEFT JOIN turns t ON t.session_id = i.session_id
+      GROUP BY i.id, i.session_id, i.status, i.consent_at, i.started_at, i.ended_at
+      ORDER BY i.started_at DESC
+      `
+    );
+    return rows;
   });
 }
